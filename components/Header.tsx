@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signout } from '@/app/auth/actions'
-import { ArrowLeft, Plus, ChevronRight, LogOut, User } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
 
 interface HeaderProps {
-    user?: any
+    user?: User | null
 }
 
 export default function Header({ user }: HeaderProps) {
@@ -15,7 +16,6 @@ export default function Header({ user }: HeaderProps) {
     const isCreate = pathname.startsWith('/create')
     const isData = pathname.startsWith('/data/')
     const isShare = pathname.startsWith('/share/')
-    const isLanding = pathname === '/'
 
     return (
         <header className="sticky top-0 z-50 bg-white border-b border-border">

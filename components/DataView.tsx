@@ -33,7 +33,8 @@ import {
   X,
   FileSpreadsheet,
   FileImage,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react'
 import Papa from 'papaparse'
 import { chatWithData } from '@/app/actions/chat'
@@ -42,7 +43,7 @@ import { deletePacket, deleteRow, updateRow, addRow } from '@/app/actions/packet
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Trash2, Plus, Edit3, Trash } from 'lucide-react'
+import { Trash2, Edit3, Trash } from 'lucide-react'
 
 interface ColumnDef {
   name: string
@@ -56,7 +57,10 @@ interface DataViewProps {
     schema: ColumnDef[]
     created_at: string
   }
-  rows: any[]
+  rows: {
+    id: string
+    row_data: Record<string, unknown>
+  }[]
   isOwner: boolean
 }
 
@@ -255,7 +259,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const getComparableValue = (row: Record<string, any>, col: ColumnDef) => {
+  const getComparableValue = (row: Record<string, unknown>, col: ColumnDef) => {
     const raw = row[col.name]
     if (col.type === 'number') {
       const num = typeof raw === 'number' ? raw : Number(raw)
@@ -479,7 +483,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     setExportError(null)
     setShowExportMenu(false)
     try {
-      const dataToExport = viewData.map(({ __row_id, ...rest }: any) => rest)
+      const dataToExport = viewData.map(({ __row_id: _, ...rest }: Record<string, unknown>) => rest)
       const csv = Papa.unparse(dataToExport)
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
@@ -500,7 +504,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     setShowExportMenu(false)
     try {
       const XLSX = await import('xlsx')
-      const dataToExport = viewData.map(({ __row_id, ...rest }: any) => rest)
+      const dataToExport = viewData.map(({ __row_id: _, ...rest }: Record<string, unknown>) => rest)
       const worksheet = XLSX.utils.json_to_sheet(dataToExport)
       const workbook = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Data')
@@ -563,7 +567,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
     setChatLoading(true)
 
-    const dataForAI = tableData.map(({ __row_id, ...rest }: any) => rest)
+    const dataForAI = tableData.map(({ __row_id: _, ...rest }: Record<string, unknown>) => rest)
     const result = await chatWithData(
       userMsg,
       dataPacket.context_text || '',
@@ -781,7 +785,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'table' | 'chart' | 'chat')}
               className={`tab ${activeTab === tab.id ? 'tab-active' : ''}`}
             >
               <tab.icon className="h-4 w-4" />
@@ -918,7 +922,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
                   </span>
                   <select
                     value={aggregateOp}
-                    onChange={(e) => setAggregateOp(e.target.value as any)}
+                    onChange={(e) => setAggregateOp(e.target.value as 'count' | 'sum' | 'avg' | 'min' | 'max')}
                     className="bg-transparent text-xs focus:outline-none cursor-pointer"
                   >
                     <option value="count">Count</option>
@@ -1042,7 +1046,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
                   {['bar', 'line', 'pie'].map(t => (
                     <button
                       key={t}
-                      onClick={() => setChartConfig(prev => ({ ...prev, type: t as any }))}
+                      onClick={() => setChartConfig(prev => ({ ...prev, type: t as 'bar' | 'line' | 'pie' }))}
                       className={`px-4 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${chartConfig.type === t ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       {t}
@@ -1094,7 +1098,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
                       <span className="text-xs font-medium text-muted-foreground uppercase">Mode</span>
                       <select
                         value={chartConfig.groupOp}
-                        onChange={e => setChartConfig(prev => ({ ...prev, groupOp: e.target.value as any }))}
+                        onChange={e => setChartConfig(prev => ({ ...prev, groupOp: e.target.value as 'count' | 'sum' | 'avg' }))}
                         className="select text-sm py-1 px-2"
                       >
                         <option value="count">Count (Frequency)</option>

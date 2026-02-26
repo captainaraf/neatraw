@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import { ArrowRight, FileSpreadsheet, Share2, Sparkles, Database, MessageSquareText, BarChart3, Lock, Zap } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default async function Home() {
   const supabase = await createClient();
