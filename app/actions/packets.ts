@@ -57,7 +57,7 @@ export async function updatePacket(packetId: string, updates: { context_text?: s
     return { success: true };
 }
 
-export async function updateRow(packetId: string, rowId: number, rowData: any) {
+export async function updateRow(packetId: string, rowId: string, rowData: unknown) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -86,7 +86,7 @@ export async function updateRow(packetId: string, rowId: number, rowData: any) {
     return { success: true };
 }
 
-export async function addRow(packetId: string, rowData: any) {
+export async function addRow(packetId: string, rowData: unknown) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -113,7 +113,7 @@ export async function addRow(packetId: string, rowData: any) {
     return { success: true };
 }
 
-export async function deleteRow(packetId: string, rowId: number) {
+export async function deleteRow(packetId: string, rowId: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

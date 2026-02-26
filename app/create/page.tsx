@@ -1,8 +1,9 @@
 
 'use client'
 
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Upload, FileSpreadsheet, FileText, Grid3X3, Check, Info } from 'lucide-react'
@@ -21,12 +22,12 @@ export default function CreateDataPacket() {
     const router = useRouter()
     const supabase = createClient()
 
-    const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<User | null>(null)
     const [step, setStep] = useState<1 | 2>(1)
     const [inputMode, setInputMode] = useState<'excel' | 'csv' | 'manual'>('excel')
     const [rawInput, setRawInput] = useState('')
     const [columns, setColumns] = useState<ColumnDef[]>([])
-    const [parsedData, setParsedData] = useState<any[]>([])
+    const [parsedData, setParsedData] = useState<Record<string, unknown>[]>([])
     const [manualRows, setManualRows] = useState<string[][]>([])
     const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null)
     const [contextText, setContextText] = useState('')
@@ -45,7 +46,7 @@ export default function CreateDataPacket() {
             }
         }
         fetchUser()
-    }, [])
+    }, [router, supabase])
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -63,7 +64,7 @@ export default function CreateDataPacket() {
 
     const activeData = (inputMode === 'csv' || inputMode === 'excel') && parsedData.length > 0 ? parsedData : manualData
 
-    const columnLabel = (index: number) => {
+    const columnLabel = useCallback((index: number) => {
         let label = ''
         let i = index
         while (i >= 0) {
@@ -71,9 +72,9 @@ export default function CreateDataPacket() {
             i = Math.floor(i / 26) - 1
         }
         return label
-    }
+    }, [])
 
-    const ensureGridSeed = () => {
+    const ensureGridSeed = useCallback(() => {
         if (columns.length === 0) {
             const seedColumns: ColumnDef[] = Array.from({ length: 5 }, (_, idx) => ({
                 name: columnLabel(idx),
@@ -82,15 +83,15 @@ export default function CreateDataPacket() {
             setColumns(seedColumns)
             setManualRows(Array.from({ length: 20 }, () => Array(seedColumns.length).fill('')))
         }
-    }
+    }, [columns.length, columnLabel])
 
     useEffect(() => {
         if (inputMode === 'manual') {
             ensureGridSeed()
         }
-    }, [inputMode])
+    }, [inputMode, ensureGridSeed])
 
-    const processParsedData = (results: any[], headers: string[]) => {
+    const processParsedData = (results: Record<string, unknown>[], headers: string[]) => {
         if (results.length === 0) {
             setError('No data found.')
             return
@@ -109,7 +110,7 @@ export default function CreateDataPacket() {
                 if (val !== undefined && val !== null && val !== '') {
                     hasValue = true
                     if (isNaN(Number(val))) isNumber = false
-                    if (isNaN(Date.parse(val))) isDate = false
+                    if (isNaN(Date.parse(val as string))) isDate = false
                 }
             }
 
@@ -159,13 +160,13 @@ export default function CreateDataPacket() {
                     const wb = XLSX.read(bstr, { type: 'binary' })
                     const wsname = wb.SheetNames[0]
                     const ws = wb.Sheets[wsname]
-                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][]
+                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
 
                     if (data.length === 0) throw new Error("Empty sheet")
 
                     const headers = data[0].map(String)
                     const rows = data.slice(1).map(row => {
-                        const obj: any = {}
+                        const obj: Record<string, unknown> = {}
                         headers.forEach((h, i) => {
                             obj[h] = row[i]
                         })
@@ -173,8 +174,8 @@ export default function CreateDataPacket() {
                     })
 
                     processParsedData(rows, headers)
-                } catch (err: any) {
-                    setError("Failed to parse Excel file: " + err.message)
+                } catch (err: unknown) {
+                    setError("Failed to parse Excel file: " + (err instanceof Error ? err.message : 'Unknown error'))
                 }
             }
             reader.readAsBinaryString(file)
@@ -198,7 +199,7 @@ export default function CreateDataPacket() {
                 const headers = results.meta.fields || []
                 processParsedData(results.data, headers)
             },
-            error: (err: any) => setError('Failed to parse CSV: ' + err.message)
+            error: (err: { message: string }) => setError('Failed to parse CSV: ' + err.message)
         })
     }
 
@@ -206,7 +207,7 @@ export default function CreateDataPacket() {
         return cols.map((col) => ({ ...col, name: col.name.trim() }))
     }
 
-    const validateSchema = (cols: ColumnDef[], rows: any[]) => {
+    const validateSchema = (cols: ColumnDef[], rows: Record<string, unknown>[]) => {
         const trimmedCols = normalizeColumns(cols)
         if (trimmedCols.length === 0) return 'Please add at least one column.'
         const names = trimmedCols.map((c) => c.name)
@@ -217,8 +218,8 @@ export default function CreateDataPacket() {
         return null
     }
 
-    const coerceRow = (row: Record<string, any>, cols: ColumnDef[]) => {
-        const output: Record<string, any> = {}
+    const coerceRow = (row: Record<string, unknown>, cols: ColumnDef[]) => {
+        const output: Record<string, unknown> = {}
         cols.forEach((col) => {
             const raw = row[col.name]
             if (col.type === 'number') {
@@ -228,8 +229,8 @@ export default function CreateDataPacket() {
                 if (!raw) {
                     output[col.name] = null
                 } else {
-                    const date = new Date(raw)
-                    output[col.name] = Number.isNaN(date.getTime()) ? raw : date.toISOString()
+                    const date = new Date(raw as string)
+                    output[col.name] = Number.isNaN(date.getTime()) ? (raw as string) : date.toISOString()
                 }
             } else {
                 output[col.name] = raw ?? ''
@@ -347,9 +348,9 @@ export default function CreateDataPacket() {
 
             router.push(`/data/${packet.id}`)
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err)
-            setError(err.message || 'Something went wrong')
+            setError(err instanceof Error ? err.message : 'Something went wrong')
         } finally {
             setLoading(false)
         }
@@ -401,7 +402,7 @@ export default function CreateDataPacket() {
                             {inputModes.map((mode) => (
                                 <button
                                     key={mode.id}
-                                    onClick={() => setInputMode(mode.id as any)}
+                                    onClick={() => setInputMode(mode.id as 'excel' | 'csv' | 'manual')}
                                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg border text-left transition-all ${inputMode === mode.id
                                         ? 'bg-primary/5 border-primary text-primary'
                                         : 'bg-card border-border hover:bg-muted hover:border-muted-foreground/30'

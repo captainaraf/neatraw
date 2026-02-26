@@ -7,7 +7,7 @@ const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY
 });
 
-export async function chatWithData(question: string, context: string, schema: any[], dataSample: any[]) {
+export async function chatWithData(question: string, context: string, schema: unknown[], dataSample: unknown[]) {
     // For MVP, we pass a sample of data (or all of it if small) and the schema.
     // We'll limit dataSample to top 50 rows to save tokens/latency if it's huge, 
     // but user wanted "raw data" analysis. 
@@ -71,8 +71,8 @@ User Question: ${question}
         }
 
         return { success: true, answer, logic };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Groq Error:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
 }

@@ -154,7 +154,8 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
   const chartRef = useRef<HTMLDivElement>(null)
 
   const tableData = useMemo(() =>
-    localRows.map((r) => ({ ...r.row_data, __row_id: r.id })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    localRows.map((r) => ({ ...r.row_data, __row_id: r.id }) as any),
     [localRows]
   )
 
@@ -178,8 +179,8 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     if (!rowInView) return
     const rowId = rowInView.__row_id
 
-    const newRowData = { ...rowInView }
-    delete newRowData.__row_id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { __row_id: _, ...newRowData } = rowInView as any & { __row_id: string }
     newRowData[colName] = value
 
     const result = await updateRow(dataPacket.id, rowId, newRowData)
@@ -267,7 +268,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     }
     if (col.type === 'date') {
       if (!raw) return null
-      const date = new Date(raw)
+      const date = new Date(raw as string)
       return Number.isNaN(date.getTime()) ? null : date.getTime()
     }
     return (raw ?? '').toString().toLowerCase()
@@ -294,13 +295,13 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
           if (!Number.isFinite(compare) || num === null) return false
           switch (filterOperator) {
             case '>':
-              return num > compare
+              return (num as number) > compare
             case '>=':
-              return num >= compare
+              return (num as number) >= compare
             case '<':
-              return num < compare
+              return (num as number) < compare
             case '<=':
-              return num <= compare
+              return (num as number) <= compare
             case 'equals':
             default:
               return num === compare
@@ -312,12 +313,12 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
           const targetDate = new Date(target)
           if (!Number.isFinite(time) || Number.isNaN(targetDate.getTime())) return false
           const targetTime = targetDate.getTime()
-          if (filterOperator === 'before') return time < targetTime
-          if (filterOperator === 'after') return time > targetTime
+          if (filterOperator === 'before') return (time as number) < targetTime
+          if (filterOperator === 'after') return (time as number) > targetTime
           if (filterOperator === 'on') {
-            return new Date(time).toDateString() === targetDate.toDateString()
+            return new Date(time as number).toDateString() === targetDate.toDateString()
           }
-          return time >= targetTime
+          return (time as number) >= targetTime
         }
 
         return true
@@ -360,6 +361,7 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     // If grouping is enabled, aggregate data by X-axis
     if (chartConfig.groupData) {
       const xAxisCol = allColumns.find(c => c.name === chartConfig.xAxis)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const groups: Record<string, any[]> = {}
       const bSize = parseFloat(chartConfig.binSize)
 
@@ -567,7 +569,8 @@ export default function DataView({ dataPacket, rows, isOwner }: DataViewProps) {
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
     setChatLoading(true)
 
-    const dataForAI = tableData.map(({ __row_id: _, ...rest }: Record<string, unknown>) => rest)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dataForAI = tableData.map(({ __row_id: _, ...rest }: any) => rest)
     const result = await chatWithData(
       userMsg,
       dataPacket.context_text || '',

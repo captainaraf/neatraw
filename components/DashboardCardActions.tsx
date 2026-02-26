@@ -11,7 +11,6 @@ interface DashboardCardActionsProps {
 
 export default function DashboardCardActions({ packetId, initialName }: DashboardCardActionsProps) {
     const [showMenu, setShowMenu] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [newName, setNewName] = useState(initialName)
     const [loading, setLoading] = useState(false)

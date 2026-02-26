@@ -73,7 +73,7 @@ export default function ResetConfirmPage() {
 
                     {sessionReady === false && (
                         <div className="mb-4 rounded-lg bg-yellow-50 p-3 text-xs text-yellow-700">
-                            We couldn't verify your reset session. Please open the reset link again or request a new one.
+                            We couldn&apos;t verify your reset session. Please open the reset link again or request a new one.
                         </div>
                     )}
 
