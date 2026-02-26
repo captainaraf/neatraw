@@ -129,7 +129,7 @@ export default function CreateDataPacket() {
         setColumns(normalizeColumns(cols))
         setParsedData(results)
 
-        const gridRows = results.map(row => cols.map(c => row[c.name] ?? ''))
+        const gridRows = results.map(row => cols.map(c => String(row[c.name] ?? '')))
         setManualRows(gridRows)
         setInputMode('manual')
     }
@@ -148,7 +148,7 @@ export default function CreateDataPacket() {
                 skipEmptyLines: true,
                 complete: (results) => {
                     const headers = results.meta.fields || []
-                    processParsedData(results.data, headers)
+                    processParsedData(results.data as Record<string, unknown>[], headers)
                 },
                 error: (err) => setError('Failed to parse CSV: ' + err.message)
             })
@@ -197,7 +197,7 @@ export default function CreateDataPacket() {
             transformHeader: (h: string) => h.trim(),
             complete: (results) => {
                 const headers = results.meta.fields || []
-                processParsedData(results.data, headers)
+                processParsedData(results.data as Record<string, unknown>[], headers)
             },
             error: (err: { message: string }) => setError('Failed to parse CSV: ' + err.message)
         })
